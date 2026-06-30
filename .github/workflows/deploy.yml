@@ -1,0 +1,40 @@
+name: Deploy pomodoro-samy to Azure
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies into package folder
+        run: |
+          pip install -r requirements.txt \
+            --target=".python_packages/lib/python3.12/site-packages"
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_890560D5BDF64E02AEF80C7D8A3C49EE }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_8F3E3520C27146BC9F482F84D117456B }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B96B67EEE7964DD7BF06FC4CB9017D0A }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: pomodoro-samy
+          slot-name: Production
+          package: .
