@@ -43,7 +43,7 @@ def version():
 @app.route("/test-vnet")
 def test_vnet():
     try:
-        r = requests.get("http://web-app-samy-private.azurewebsites.net/ping", timeout=5)
+        r = requests.get("https://web-app-samy-private.azurewebsites.net/ping", timeout=5, verify=False)
         return jsonify({"depuis": "App A (publique)", "reponse_app_b": r.json()})
     except Exception as e:
         return jsonify({"erreur": str(e)}), 500
