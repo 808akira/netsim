@@ -36,6 +36,10 @@ def init_db():
 def index():
     return render_template("index.html")
 
+@app.route("/version")
+def version():
+    return jsonify({"version": "v2-vnet"})
+
 @app.route("/test-vnet")
 def test_vnet():
     try:
