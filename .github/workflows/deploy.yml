@@ -1,4 +1,4 @@
-name: Deploy pomodoro-samy to Azure
+name: Deploy NetSim to Azure
 
 on:
   push:

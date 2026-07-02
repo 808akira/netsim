@@ -3,18 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Network Dashboard</title>
+<title>Network Simulator</title>
 <style>
   :root {
-    --bg: #0b0f1a;
-    --card: #111827;
-    --border: #1f2937;
-    --text: #e2e8f0;
-    --muted: #64748b;
-    --green: #10b981;
-    --red: #ef4444;
-    --blue: #3b82f6;
-    --purple: #8b5cf6;
+    --bg:      #0b0f1a;
+    --card:    #111827;
+    --border:  #1f2937;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --green:   #10b981;
+    --red:     #ef4444;
+    --blue:    #3b82f6;
+    --purple:  #8b5cf6;
+    --yellow:  #f59e0b;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -22,325 +23,496 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: 'Segoe UI', system-ui, monospace;
+    font-family: 'Segoe UI', system-ui, sans-serif;
     min-height: 100vh;
     padding: 32px 20px;
   }
 
   header {
-    max-width: 860px;
-    margin: 0 auto 32px;
+    max-width: 960px;
+    margin: 0 auto 28px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
   }
 
-  header h1 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    letter-spacing: .5px;
-  }
-
+  header h1 { font-size: 1.15rem; font-weight: 700; }
   header h1 span { color: var(--muted); font-weight: 400; }
 
-  .refresh-info {
+  .backend-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: .75rem;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
     color: var(--muted);
   }
+  .backend-pill.ok  { border-color: var(--green); color: var(--green); }
+  .backend-pill.err { border-color: var(--red);   color: var(--red); }
 
-  .grid {
-    max-width: 860px;
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .dot.pulse { animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .layout {
+    max-width: 960px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 340px 1fr;
     gap: 16px;
+    align-items: start;
   }
-
-  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
 
   .card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 20px 22px;
+    padding: 22px;
   }
-
-  .card.full { grid-column: 1 / -1; }
 
   .card-label {
     font-size: .68rem;
     text-transform: uppercase;
     letter-spacing: 1.5px;
     color: var(--muted);
-    margin-bottom: 10px;
+    margin-bottom: 16px;
   }
 
-  /* Architecture diagram */
-  .arch {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    padding: 8px 0;
-  }
-
-  .arch-node {
-    flex: 1;
-    border-radius: 10px;
-    padding: 14px 12px;
-    text-align: center;
-    border: 1px solid var(--border);
-  }
-
-  .arch-node.public  { border-color: var(--blue); background: rgba(59,130,246,.07); }
-  .arch-node.private { border-color: var(--purple); background: rgba(139,92,246,.07); }
-
-  .arch-node .tag {
-    font-size: .62rem;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-  }
-
-  .arch-node.public  .tag { color: var(--blue); }
-  .arch-node.private .tag { color: var(--purple); }
-
-  .arch-node .name { font-size: .85rem; font-weight: 700; }
-  .arch-node .sub  { font-size: .7rem; color: var(--muted); margin-top: 2px; }
-
-  .arch-connector {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 3px;
-    padding: 0 10px;
-    color: var(--muted);
-    font-size: .62rem;
-    white-space: nowrap;
-  }
-
-  .arch-connector .line {
-    width: 60px;
-    height: 2px;
-    background: linear-gradient(90deg, var(--blue), var(--purple));
-    border-radius: 2px;
-  }
-
-  /* Status badge */
-  .status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: .8rem;
-    font-weight: 600;
-    padding: 4px 12px;
-    border-radius: 999px;
-  }
-
-  .status-badge.ok  { background: rgba(16,185,129,.15); color: var(--green); }
-  .status-badge.err { background: rgba(239,68,68,.15);  color: var(--red); }
-
-  .dot-pulse {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: currentColor;
-    animation: pulse 1.5s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: .3; }
-  }
-
-  /* Metrics grid */
-  .metrics {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-top: 12px;
-  }
-
-  .metric {
-    background: #0b0f1a;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-  }
-
-  .metric .m-key   { font-size: .68rem; color: var(--muted); margin-bottom: 4px; }
-  .metric .m-val   { font-size: .9rem; font-weight: 600; font-family: monospace; }
-
-  /* Log feed */
-  .log-feed {
-    font-family: monospace;
-    font-size: .75rem;
-    height: 130px;
-    overflow-y: auto;
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: .75rem; color: var(--muted); margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%;
     background: #070b12;
+    border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: .85rem;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--blue); }
+  .field .hint { font-size: .68rem; color: var(--muted); margin-top: 3px; }
+
+  .algo-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+
+  .algo-card {
+    background: #070b12;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .algo-card:hover    { border-color: var(--blue); }
+  .algo-card.selected { border-color: var(--purple); background: rgba(139,92,246,.08); }
+
+  .algo-name { font-size: .78rem; font-weight: 600; margin-bottom: 2px; }
+  .algo-cost {
+    font-size: .65rem; padding: 1px 6px; border-radius: 4px;
+    display: inline-block; margin-bottom: 4px;
+  }
+  .algo-cost.light  { background: rgba(16,185,129,.15); color: var(--green); }
+  .algo-cost.medium { background: rgba(245,158,11,.15);  color: var(--yellow); }
+  .algo-cost.heavy  { background: rgba(239,68,68,.15);   color: var(--red); }
+  .algo-desc { font-size: .67rem; color: var(--muted); line-height: 1.4; }
+
+  .btn {
+    width: 100%; padding: 11px;
+    background: var(--blue); color: #fff;
+    border: none; border-radius: 10px;
+    font-size: .9rem; font-weight: 600;
+    cursor: pointer; transition: opacity .15s;
+  }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn:not(:disabled):hover { opacity: .85; }
+
+  .progress-wrap { margin-top: 10px; }
+  .progress-bar-bg {
+    width: 100%; height: 4px;
+    background: var(--border); border-radius: 2px;
+    overflow: hidden; margin-top: 6px;
+  }
+  .progress-bar-fill {
+    height: 100%; background: var(--blue);
+    border-radius: 2px; transition: width .3s; width: 0%;
   }
 
+  .right { display: flex; flex-direction: column; gap: 16px; }
+
+  .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media (max-width: 500px) { .metrics-row { grid-template-columns: 1fr 1fr; } }
+
+  .metric-box { background: #070b12; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .metric-box .m-label { font-size: .65rem; color: var(--muted); margin-bottom: 3px; }
+  .metric-box .m-val   { font-size: .95rem; font-weight: 700; font-family: monospace; }
+
+  .result-panel { display: none; }
+  .result-panel.visible { display: block; }
+
+  .result-header {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+  }
+
+  .badge { font-size: .72rem; padding: 3px 10px; border-radius: 6px; font-weight: 600; }
+  .badge.ok  { background: rgba(16,185,129,.15); color: var(--green); }
+  .badge.err { background: rgba(239,68,68,.15);  color: var(--red); }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 500px) { .stat-grid { grid-template-columns: 1fr 1fr; } }
+
+  .stat-box { background: #070b12; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .stat-box .s-label { font-size: .65rem; color: var(--muted); margin-bottom: 3px; }
+  .stat-box .s-val   { font-size: .9rem; font-weight: 600; font-family: monospace; }
+
+  .json-block {
+    background: #070b12; border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px;
+    font-family: monospace; font-size: .72rem;
+    line-height: 1.6; overflow-x: auto;
+    white-space: pre-wrap; word-break: break-all;
+    max-height: 280px; overflow-y: auto; color: #a5b4fc;
+  }
+
+  .log-feed {
+    font-family: monospace; font-size: .72rem;
+    height: 110px; overflow-y: auto;
+    background: #070b12; border-radius: 8px;
+    padding: 10px 12px;
+    display: flex; flex-direction: column; gap: 3px;
+  }
   .log-line { display: flex; gap: 8px; }
   .log-time { color: var(--muted); flex-shrink: 0; }
   .log-ok   { color: var(--green); }
   .log-err  { color: var(--red); }
+  .log-info { color: var(--blue); }
 
-  /* Internet block demo */
-  .block-demo {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-top: 4px;
+  .arch { display: flex; align-items: center; padding: 6px 0; }
+  .arch-node {
+    flex: 1; border-radius: 10px; padding: 10px;
+    text-align: center; border: 1px solid var(--border);
   }
+  .arch-node.public  { border-color: var(--blue);   background: rgba(59,130,246,.07); }
+  .arch-node.private { border-color: var(--purple);  background: rgba(139,92,246,.07); }
+  .arch-node .tag  { font-size: .6rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+  .arch-node.public  .tag { color: var(--blue); }
+  .arch-node.private .tag { color: var(--purple); }
+  .arch-node .name { font-size: .8rem; font-weight: 700; }
+  .arch-node .sub  { font-size: .65rem; color: var(--muted); margin-top: 2px; }
 
-  .route-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: .78rem;
-    background: #070b12;
-    border-radius: 8px;
-    padding: 8px 12px;
+  .arch-connector {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 3px;
+    padding: 0 8px; color: var(--muted);
+    font-size: .6rem; white-space: nowrap;
   }
-
-  .route-row .path { color: var(--muted); font-family: monospace; }
-  .route-label { font-size: .7rem; padding: 2px 8px; border-radius: 6px; font-weight: 600; }
-  .route-label.allow { background: rgba(16,185,129,.15); color: var(--green); }
-  .route-label.block { background: rgba(239,68,68,.15);  color: var(--red); }
-
-  .last-update {
-    max-width: 860px;
-    margin: 16px auto 0;
-    font-size: .7rem;
-    color: var(--muted);
-    text-align: right;
+  .arch-connector .line {
+    width: 50px; height: 2px;
+    background: linear-gradient(90deg, var(--blue), var(--purple));
+    border-radius: 2px;
   }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>Network Dashboard <span>/ Azure VNet Monitor</span></h1>
-  <div class="refresh-info">Rafraîchissement auto · 5s</div>
+  <h1>Network Simulator <span>/ Azure VNet</span></h1>
+  <div id="backend-pill" class="backend-pill"><div class="dot pulse"></div> Vérification…</div>
 </header>
 
-<div class="grid">
+<div class="layout">
 
-  <!-- Architecture -->
-  <div class="card full">
-    <div class="card-label">Architecture réseau</div>
-    <div class="arch">
-      <div class="arch-node public">
-        <div class="tag">Public · App A</div>
-        <div class="name">pomodoro-samy</div>
-        <div class="sub">Internet → Azure</div>
-      </div>
-      <div class="arch-connector">
-        <div class="line"></div>
-        <span>VNet privé</span>
-        <div class="line"></div>
-      </div>
-      <div class="arch-node private">
-        <div class="tag">Privé · App B</div>
-        <div class="name">samy-private</div>
-        <div class="sub">Private Endpoint</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Statut Backend -->
+  <!-- LEFT -->
   <div class="card">
-    <div class="card-label">Statut backend (App B)</div>
-    <div id="status-badge" class="status-badge" style="margin-bottom:12px">
-      <div class="dot-pulse"></div> Connexion…
+    <div class="card-label">Configuration de la simulation</div>
+
+    <div class="field">
+      <label>Nombre de nœuds <span style="color:var(--muted)">(machines dans le réseau)</span></label>
+      <input type="number" id="nodes" value="200" min="10" max="1000">
+      <div class="hint">Plus élevé = calcul plus long · max 1000</div>
     </div>
-    <div class="metrics" id="metrics">
-      <div class="metric"><div class="m-key">Hostname</div><div class="m-val" id="m-host">—</div></div>
-      <div class="metric"><div class="m-key">Uptime</div><div class="m-val" id="m-uptime">—</div></div>
-      <div class="metric"><div class="m-key">Réseau</div><div class="m-val" id="m-network">—</div></div>
-      <div class="metric"><div class="m-key">Région</div><div class="m-val" id="m-region">—</div></div>
+
+    <div class="field">
+      <label>Nombre de liens <span style="color:var(--muted)">(connexions entre machines)</span></label>
+      <input type="number" id="edges" value="600" min="10" max="5000">
+    </div>
+
+    <div class="field">
+      <label>Algorithme</label>
+      <div class="algo-cards">
+        <div class="algo-card selected" data-algo="shortest_path" onclick="selectAlgo(this)">
+          <div class="algo-name">Chemin court</div>
+          <span class="algo-cost light">Léger</span>
+          <div class="algo-desc">Trouve le chemin optimal entre deux nœuds (Dijkstra)</div>
+        </div>
+        <div class="algo-card" data-algo="betweenness" onclick="selectAlgo(this)">
+          <div class="algo-name">Nœuds critiques</div>
+          <span class="algo-cost medium">Moyen</span>
+          <div class="algo-desc">Identifie les nœuds les plus importants du réseau</div>
+        </div>
+        <div class="algo-card" data-algo="failure_simulation" onclick="selectAlgo(this)">
+          <div class="algo-name">Simulation panne</div>
+          <span class="algo-cost medium">Moyen</span>
+          <div class="algo-desc">Teste la résilience si des nœuds tombent en panne</div>
+        </div>
+        <div class="algo-card" data-algo="all" onclick="selectAlgo(this)">
+          <div class="algo-name">Tout lancer</div>
+          <span class="algo-cost heavy">Lourd</span>
+          <div class="algo-desc">Exécute les 3 algorithmes — charge CPU/RAM maximale</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field" id="failure-field" style="display:none">
+      <label>Scénarios de panne</label>
+      <input type="number" id="failure_rounds" value="30" min="5" max="100">
+      <div class="hint">Nombre de pannes aléatoires simulées</div>
+    </div>
+
+    <button class="btn" id="run-btn" onclick="runSimulation()">▶ Lancer la simulation</button>
+
+    <div class="progress-wrap" id="progress-wrap" style="display:none">
+      <div style="font-size:.72rem;color:var(--muted)" id="progress-label">Calcul en cours…</div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar"></div></div>
+    </div>
+
+    <div style="margin-top:22px">
+      <div class="card-label">Architecture</div>
+      <div class="arch">
+        <div class="arch-node public">
+          <div class="tag">Public · App A</div>
+          <div class="name">pomodoro-samy</div>
+          <div class="sub">Interface utilisateur</div>
+        </div>
+        <div class="arch-connector">
+          <div class="line"></div>
+          <span>VNet</span>
+          <div class="line"></div>
+        </div>
+        <div class="arch-node private">
+          <div class="tag">Privé · App B</div>
+          <div class="name">samy-private</div>
+          <div class="sub">Moteur de calcul</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Accès réseau -->
-  <div class="card">
-    <div class="card-label">Contrôle d'accès</div>
-    <div class="block-demo">
-      <div class="route-row">
-        <span class="path">Internet → App A</span>
-        <span class="route-label allow">Autorisé</span>
-      </div>
-      <div class="route-row">
-        <span class="path">App A → App B (VNet)</span>
-        <span class="route-label allow">Autorisé</span>
-      </div>
-      <div class="route-row">
-        <span class="path">Internet → App B</span>
-        <span class="route-label block">Bloqué 403</span>
+  <!-- RIGHT -->
+  <div class="right">
+
+    <div class="card">
+      <div class="card-label">Métriques backend (App B) — live</div>
+      <div class="metrics-row">
+        <div class="metric-box">
+          <div class="m-label">CPU</div>
+          <div class="m-val" id="m-cpu">—</div>
+        </div>
+        <div class="metric-box">
+          <div class="m-label">RAM</div>
+          <div class="m-val" id="m-ram">—</div>
+        </div>
+        <div class="metric-box">
+          <div class="m-label">Jobs actifs</div>
+          <div class="m-val" id="m-jobs">—</div>
+        </div>
+        <div class="metric-box">
+          <div class="m-label">Uptime</div>
+          <div class="m-val" id="m-uptime">—</div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Log feed -->
-  <div class="card full">
-    <div class="card-label">Log de connexions</div>
-    <div class="log-feed" id="log-feed"></div>
-  </div>
+    <div class="card result-panel" id="result-panel">
+      <div class="result-header">
+        <div class="card-label" style="margin:0">Résultat de la simulation</div>
+        <span class="badge ok" id="result-badge">Terminé</span>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="s-label">Nœuds</div><div class="s-val" id="r-nodes">—</div></div>
+        <div class="stat-box"><div class="s-label">Liens</div><div class="s-val" id="r-edges">—</div></div>
+        <div class="stat-box"><div class="s-label">Algorithme</div><div class="s-val" id="r-algo">—</div></div>
+        <div class="stat-box"><div class="s-label">Durée</div><div class="s-val" id="r-duration">—</div></div>
+        <div class="stat-box"><div class="s-label">RAM consommée</div><div class="s-val" id="r-ram">—</div></div>
+        <div class="stat-box"><div class="s-label">Hostname</div><div class="s-val" id="r-host">—</div></div>
+      </div>
+      <div class="card-label" style="margin-bottom:8px">Résultat brut (JSON)</div>
+      <div class="json-block" id="json-output"></div>
+    </div>
 
+    <div class="card">
+      <div class="card-label">Log d'activité</div>
+      <div class="log-feed" id="log-feed"></div>
+    </div>
+
+  </div>
 </div>
 
-<div class="last-update">Dernière mise à jour : <span id="last-ts">—</span></div>
-
 <script>
-const logFeed = document.getElementById('log-feed');
-const MAX_LOGS = 50;
+let selectedAlgo = 'shortest_path';
+let pollInterval = null;
+let progressAnim = null;
+let progressVal  = 0;
 
-function ts() {
-  return new Date().toLocaleTimeString('fr-FR');
+function selectAlgo(el) {
+  document.querySelectorAll('.algo-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedAlgo = el.dataset.algo;
+  const ff = document.getElementById('failure-field');
+  ff.style.display = (selectedAlgo === 'failure_simulation' || selectedAlgo === 'all') ? 'block' : 'none';
 }
 
-function addLog(ok, msg) {
+function ts() { return new Date().toLocaleTimeString('fr-FR'); }
+
+function log(cls, msg) {
+  const feed = document.getElementById('log-feed');
   const line = document.createElement('div');
   line.className = 'log-line';
-  line.innerHTML = `<span class="log-time">${ts()}</span><span class="${ok ? 'log-ok' : 'log-err'}">${msg}</span>`;
-  logFeed.prepend(line);
-  while (logFeed.children.length > MAX_LOGS) logFeed.lastChild.remove();
+  line.innerHTML = `<span class="log-time">${ts()}</span><span class="${cls}">${msg}</span>`;
+  feed.prepend(line);
+  while (feed.children.length > 60) feed.lastChild.remove();
 }
 
-async function refresh() {
+function animateProgress() {
+  progressVal = 0;
+  const bar = document.getElementById('progress-bar');
+  bar.style.background = 'var(--blue)';
+  bar.style.width = '0%';
+  clearInterval(progressAnim);
+  progressAnim = setInterval(() => {
+    if (progressVal < 88) {
+      progressVal += Math.random() * 2.5;
+      bar.style.width = Math.min(progressVal, 88) + '%';
+    }
+  }, 300);
+}
+
+function finishProgress() {
+  clearInterval(progressAnim);
+  const bar = document.getElementById('progress-bar');
+  bar.style.width = '100%';
+  bar.style.background = 'var(--green)';
+  setTimeout(() => {
+    document.getElementById('progress-wrap').style.display = 'none';
+    bar.style.background = 'var(--blue)';
+    bar.style.width = '0%';
+  }, 800);
+}
+
+async function fetchMetrics() {
+  try {
+    const r = await fetch('/api/metrics');
+    const j = await r.json();
+    if (j.ok) {
+      const d = j.data;
+      document.getElementById('m-cpu').textContent  = d.cpu_percent + '%';
+      document.getElementById('m-ram').textContent  = d.memory_mb + ' MB';
+      document.getElementById('m-jobs').textContent = d.active_jobs;
+      const u = d.uptime_seconds;
+      document.getElementById('m-uptime').textContent =
+        `${Math.floor(u/3600)}h ${Math.floor((u%3600)/60)}m`;
+    }
+  } catch(_) {}
+}
+
+async function checkBackend() {
   try {
     const r = await fetch('/api/backend-status');
-    const json = await r.json();
-
-    const badge = document.getElementById('status-badge');
-
-    if (json.reachable) {
-      const d = json.data;
-      badge.className = 'status-badge ok';
-      badge.innerHTML = '<div class="dot-pulse"></div> Backend opérationnel';
-
-      document.getElementById('m-host').textContent    = d.hostname;
-      document.getElementById('m-uptime').textContent  = d.uptime_human;
-      document.getElementById('m-network').textContent = d.network;
-      document.getElementById('m-region').textContent  = d.region;
-
-      addLog(true, `App B joignable via VNet — hostname: ${d.hostname} — uptime: ${d.uptime_human}`);
+    const j = await r.json();
+    const pill = document.getElementById('backend-pill');
+    if (j.reachable) {
+      pill.className = 'backend-pill ok';
+      pill.innerHTML = '<div class="dot"></div> App B connectée via VNet';
     } else {
-      badge.className = 'status-badge err';
-      badge.innerHTML = '<div class="dot-pulse"></div> Backend injoignable';
-      addLog(false, `Erreur VNet : ${json.error}`);
+      pill.className = 'backend-pill err';
+      pill.innerHTML = '<div class="dot"></div> App B injoignable';
     }
-  } catch(e) {
-    addLog(false, `Erreur réseau : ${e.message}`);
-  }
-  document.getElementById('last-ts').textContent = ts();
+  } catch(_) {}
 }
 
-refresh();
-setInterval(refresh, 5000);
+function showResult(data) {
+  const panel = document.getElementById('result-panel');
+  panel.classList.add('visible');
+  document.getElementById('r-nodes').textContent    = data.nodes    ?? '—';
+  document.getElementById('r-edges').textContent    = data.edges    ?? '—';
+  document.getElementById('r-algo').textContent     = data.algorithm ?? '—';
+  document.getElementById('r-duration').textContent = data.duration_seconds != null ? data.duration_seconds + 's' : '—';
+  document.getElementById('r-ram').textContent      = data.memory_mb != null ? data.memory_mb + ' MB' : '—';
+  document.getElementById('r-host').textContent     = data.hostname  ?? '—';
+  document.getElementById('json-output').textContent = JSON.stringify(data.result, null, 2);
+}
+
+async function runSimulation() {
+  const nodes         = parseInt(document.getElementById('nodes').value);
+  const edges         = parseInt(document.getElementById('edges').value);
+  const failure_rounds = parseInt(document.getElementById('failure_rounds').value) || 30;
+
+  if (nodes < 10 || nodes > 1000) { log('log-err', 'Nœuds : entre 10 et 1000'); return; }
+
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  document.getElementById('progress-wrap').style.display = 'block';
+  document.getElementById('result-panel').classList.remove('visible');
+  animateProgress();
+
+  log('log-info', `Envoi → ${nodes} nœuds, ${edges} liens, algo: ${selectedAlgo}`);
+
+  let jobId;
+  try {
+    const r = await fetch('/api/simulate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nodes, edges, algorithm: selectedAlgo, failure_rounds }),
+    });
+    const j = await r.json();
+    if (!j.job_id) throw new Error(j.error || 'Pas de job_id');
+    jobId = j.job_id;
+    log('log-ok', `Job lancé : ${jobId}`);
+  } catch(e) {
+    log('log-err', 'Erreur lancement : ' + e.message);
+    btn.disabled = false;
+    finishProgress();
+    return;
+  }
+
+  clearInterval(pollInterval);
+  let elapsed = 0;
+  pollInterval = setInterval(async () => {
+    elapsed += 2;
+    document.getElementById('progress-label').textContent = `Calcul en cours… ${elapsed}s`;
+    try {
+      const r = await fetch(`/api/jobs/${jobId}`);
+      const j = await r.json();
+      if (j.status === 'done') {
+        clearInterval(pollInterval);
+        finishProgress();
+        btn.disabled = false;
+        log('log-ok', `Terminé en ${j.duration_seconds}s — RAM: ${j.memory_mb} MB`);
+        showResult(j);
+      } else if (j.status === 'error') {
+        clearInterval(pollInterval);
+        finishProgress();
+        btn.disabled = false;
+        log('log-err', 'Erreur : ' + (j.error || '?'));
+      }
+    } catch(e) {
+      log('log-err', 'Polling : ' + e.message);
+    }
+  }, 2000);
+}
+
+checkBackend();
+fetchMetrics();
+setInterval(fetchMetrics, 4000);
+setInterval(checkBackend, 15000);
+log('log-info', 'Dashboard initialisé');
 </script>
 </body>
 </html>
